@@ -33,7 +33,21 @@ async function run() {
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
 
+        const courseCollect = client.db('assignment-12').collection('courses');
 
+
+        // 1. course related apis
+
+        app.post('/courses', async (req, res) => {
+            const course = req.body;
+            const result = await courseCollect.insertOne(course);
+            res.send(result);
+        })
+
+        app.get('/courses', async(req, res) => {
+            const result = await courseCollect.find().toArray();
+            res.send(result);  
+        })
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
