@@ -34,6 +34,7 @@ async function run() {
         await client.connect();
 
         const courseCollect = client.db('assignment-12').collection('courses');
+        const instructorCollection = client.db('assignment-12').collection('instructors');
 
 
         // 1. course related apis
@@ -47,6 +48,17 @@ async function run() {
         app.get('/courses', async(req, res) => {
             const result = await courseCollect.find().toArray();
             res.send(result);  
+        })
+
+        // instructors related apis
+        app.post('/instructors', async(req, res) => {
+            const instructor = req.body;
+            const result = await instructorCollection.insertOne(instructor);
+            res.send(result);
+        })
+        app.get('/instructors', async(req, res) => {
+            const result = await instructorCollection.find().toArray();
+            res.send(result);
         })
 
         // Send a ping to confirm a successful connection
