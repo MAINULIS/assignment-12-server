@@ -35,6 +35,7 @@ async function run() {
 
         const courseCollect = client.db('assignment-12').collection('courses');
         const instructorCollection = client.db('assignment-12').collection('instructors');
+        const testimonialCollection = client.db('assignment-12').collection('testimonial');
 
 
         // 1. course related apis
@@ -58,6 +59,17 @@ async function run() {
         })
         app.get('/instructors', async(req, res) => {
             const result = await instructorCollection.find().toArray();
+            res.send(result);
+        })
+
+        // testimonial related apis
+        app.post('/testimonials', async(req, res) => {
+            const testimonial = req.body;
+            const result = await testimonialCollection.insertOne(testimonial);
+            res.send(result);
+        })
+        app.get('/testimonials', async(req, res) => {
+            const result = await testimonialCollection.find().toArray();
             res.send(result);
         })
 
