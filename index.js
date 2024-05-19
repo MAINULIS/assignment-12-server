@@ -36,6 +36,7 @@ async function run() {
         const courseCollect = client.db('assignment-12').collection('courses');
         const instructorCollection = client.db('assignment-12').collection('instructors');
         const testimonialCollection = client.db('assignment-12').collection('testimonial');
+        const selectedCollection = client.db('assignment-12').collection('selected')
 
 
         // 1. course related apis
@@ -70,8 +71,25 @@ async function run() {
         })
         app.get('/testimonials', async(req, res) => {
             const result = await testimonialCollection.find().toArray();
+            res.send(result); 
+        }) 
+        
+        // select class related apis
+        app.post('/selected', async(req, res) => {
+            const course = req.body;
+            const result = await selectedCollection.insertOne(course);
             res.send(result);
         })
+        app.get('/selected', async(req, res) => {
+            const email = req.query.email;
+            if(!email) {
+                res.send([]);
+            }
+            const query = {email: email};
+            const result = await selectedCollection.find(query).toArray();
+            res.send(result);
+        })
+        
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
