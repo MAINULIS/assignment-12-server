@@ -4,6 +4,7 @@ require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY)
 const port = process.env.PORT || 5000;
 
 // middleware
@@ -62,6 +63,20 @@ async function run() {
         const testimonialCollection = client.db('assignment-12').collection('testimonial');
         const selectedCollection = client.db('assignment-12').collection('selected')
 
+        // generate client secret
+        app.post('/create-payment-intent', verifyJWT, async(req, res) => {
+            const {price} = req.body;
+            if(price) {
+                const amount = parseFloat(price) * 100;
+                const paymentIntent = await stripe.paymentIntents.create({
+                    amount: amount,
+                    currency: 'usd',
+                    payment_method_types: ['card'],
+                })
+                res.send({clientSecret: paymentIntent.client_secret})
+            }
+        })
+
         // generate jwt
         app.post('/jwt', (req, res) => {
             const email = req.body;
@@ -82,6 +97,7 @@ async function run() {
             const result = await courseCollect.find().toArray();
             res.send(result);  
         })
+        // ToDo: update course student number after payment
 
         // 2.instructors related apis
         app.post('/instructors', async(req, res) => {
@@ -125,6 +141,12 @@ async function run() {
             const id = req.params.id;
             const query = { _id: new ObjectId(id)};
             const result = await selectedCollection.deleteOne(query);
+            res.send(result);
+        })
+        app.get('/selected/:id', async(req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id)};
+            const result = await selectedCollection.findOne(query);
             res.send(result);
         })
         
