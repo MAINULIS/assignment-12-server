@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 5000;
@@ -28,15 +29,45 @@ const client = new MongoClient(uri, {
     }
 });
 
+// jwt middleware(Validate jwt)
+const verifyJWT = (req, res, next) => {
+    const authorization = req.headers.authorization;
+    if(!authorization){
+        return res.status(401).send({
+            error: true, message: "Unauthorized Access"
+        })
+    }
+
+    const token = authorization.split(' ')[1];
+     console.log(token);
+    //  verify token
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if(err){
+            return res.status(401).send({
+                error: true, message: "Unauthorized Access"
+            })
+        }
+        req.decoded = decoded;
+        next();
+    })
+}
+
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
         const courseCollect = client.db('assignment-12').collection('courses');
         const instructorCollection = client.db('assignment-12').collection('instructors');
         const testimonialCollection = client.db('assignment-12').collection('testimonial');
         const selectedCollection = client.db('assignment-12').collection('selected')
+
+        // generate jwt
+        app.post('/jwt', (req, res) => {
+            const email = req.body;
+            const token = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '5h'});
+            res.send ({token});
+        })
 
 
         // 1. course related apis
@@ -52,7 +83,7 @@ async function run() {
             res.send(result);  
         })
 
-        // instructors related apis
+        // 2.instructors related apis
         app.post('/instructors', async(req, res) => {
             const instructor = req.body;
             const result = await instructorCollection.insertOne(instructor);
@@ -63,7 +94,7 @@ async function run() {
             res.send(result);
         })
 
-        // testimonial related apis
+        // 3. testimonial related apis
         app.post('/testimonials', async(req, res) => {
             const testimonial = req.body;
             const result = await testimonialCollection.insertOne(testimonial);
@@ -74,12 +105,13 @@ async function run() {
             res.send(result); 
         }) 
         
-        // select class related apis
+        // 4. select class related apis
         app.post('/selected', async(req, res) => {
             const course = req.body;
             const result = await selectedCollection.insertOne(course);
             res.send(result);
         })
+        // get selected course by email
         app.get('/selected', async(req, res) => {
             const email = req.query.email;
             if(!email) {
