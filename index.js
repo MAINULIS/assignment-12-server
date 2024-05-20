@@ -40,7 +40,7 @@ const verifyJWT = (req, res, next) => {
     }
 
     const token = authorization.split(' ')[1];
-     console.log(token);
+    //  console.log(token);
     //  verify token
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
         if(err){
@@ -61,7 +61,8 @@ async function run() {
         const courseCollect = client.db('assignment-12').collection('courses');
         const instructorCollection = client.db('assignment-12').collection('instructors');
         const testimonialCollection = client.db('assignment-12').collection('testimonial');
-        const selectedCollection = client.db('assignment-12').collection('selected')
+        const selectedCollection = client.db('assignment-12').collection('selected');
+        const enrolledCollection = client.db('assignment-12').collection('enrolled')
 
         // generate client secret
         app.post('/create-payment-intent', verifyJWT, async(req, res) => {
@@ -80,7 +81,7 @@ async function run() {
         // generate jwt
         app.post('/jwt', (req, res) => {
             const email = req.body;
-            const token = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '5h'});
+            const token = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '10h'});
             res.send ({token});
         })
 
@@ -128,8 +129,14 @@ async function run() {
             res.send(result);
         })
         // get selected course by email
-        app.get('/selected', async(req, res) => {
+        app.get('/selected',verifyJWT, async(req, res) => {
             const email = req.query.email;
+            const decodedEmail = req.decoded.email;
+            if(email !== decodedEmail){
+                return res.status(403).send({
+                    error: true, message: "Forbidden Access"
+                })
+            }
             if(!email) {
                 res.send([]);
             }
@@ -150,6 +157,12 @@ async function run() {
             res.send(result);
         })
         
+       // save booking-courses info to db
+       app.post ('/enrolled-courses', async (req, res) => {
+        const enroll = req.body;
+        const result = await enrolledCollection.insertOne(enroll);
+        res.send(result);
+       })
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
