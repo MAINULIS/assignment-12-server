@@ -33,7 +33,7 @@ const client = new MongoClient(uri, {
 // jwt middleware(Validate jwt)
 const verifyJWT = (req, res, next) => {
     const authorization = req.headers.authorization;
-    if(!authorization){
+    if (!authorization) {
         return res.status(401).send({
             error: true, message: "Unauthorized Access"
         })
@@ -43,7 +43,7 @@ const verifyJWT = (req, res, next) => {
     //  console.log(token);
     //  verify token
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-        if(err){
+        if (err) {
             return res.status(401).send({
                 error: true, message: "Unauthorized Access"
             })
@@ -62,27 +62,49 @@ async function run() {
         const instructorCollection = client.db('assignment-12').collection('instructors');
         const testimonialCollection = client.db('assignment-12').collection('testimonial');
         const selectedCollection = client.db('assignment-12').collection('selected');
-        const enrolledCollection = client.db('assignment-12').collection('enrolled')
+        const enrolledCollection = client.db('assignment-12').collection('enrolled');
+        const usersCollection = client.db('assignment-12').collection('users');
 
         // generate client secret
-        app.post('/create-payment-intent', verifyJWT, async(req, res) => {
-            const {price} = req.body;
-            if(price) {
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+            const { price } = req.body;
+            if (price) {
                 const amount = parseFloat(price) * 100;
                 const paymentIntent = await stripe.paymentIntents.create({
                     amount: amount,
                     currency: 'usd',
                     payment_method_types: ['card'],
                 })
-                res.send({clientSecret: paymentIntent.client_secret})
+                res.send({ clientSecret: paymentIntent.client_secret })
             }
         })
 
         // generate jwt
         app.post('/jwt', (req, res) => {
             const email = req.body;
-            const token = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '10h'});
-            res.send ({token});
+            const token = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '10h' });
+            res.send({ token });
+        })
+
+        // 0. user related apis
+        app.post('/users', async (req, res) => {
+            const user = req.body;
+            const query = {email: user.email};
+            const alreadyExist = await usersCollection.findOne(query);
+            if(alreadyExist) {
+                return res.send({message: "The user already exist"})
+            }
+
+            const result = await usersCollection.insertOne(user);
+            res.send(result); 
+        })
+
+        // get user by email
+        app.get('/users/:email', async(req, res) => {
+            const email = req.params.email;
+            const query = {email: email};
+            const result = await usersCollection.findOne(query);
+            res.send(result); 
         })
 
 
@@ -94,75 +116,103 @@ async function run() {
             res.send(result);
         })
 
-        app.get('/courses', async(req, res) => {
+        app.get('/courses', async (req, res) => {
             const result = await courseCollect.find().toArray();
-            res.send(result);  
+            res.send(result);
         })
         // ToDo: update course student number after payment
+        // update course number after enrolled
+        // app.patch('/courses/:id', async (req, res) => {
+        //     const id = req.params.id;
+        //     // const paymentInfo = req.body;
+        //     const students = req.body.students;
+        //     const seats = req.body.seats;
+        //     const query = { _id: new ObjectId(id)};
+        //     const updatedDoc = {
+        //         $set: {
+        //             enrolledStudents: students + 1,
+        //             availableSets: seats - 1
+        //         }
+        //     }
+        //     const update = await courseCollect.updateOne(query, updatedDoc);
+        //     console.log('update',update);
+        //     res.send(update); 
+        // })
 
         // 2.instructors related apis
-        app.post('/instructors', async(req, res) => {
+        app.post('/instructors', async (req, res) => {
             const instructor = req.body;
-            const result = await instructorCollection.insertOne(instructor);
-            res.send(result);
+            const result = await instructorCollection.insertOne(instructor);      
+            res.send(result);         
         })
-        app.get('/instructors', async(req, res) => {
+        app.get('/instructors', async (req, res) => {
             const result = await instructorCollection.find().toArray();
             res.send(result);
-        })
+        }) 
 
         // 3. testimonial related apis
-        app.post('/testimonials', async(req, res) => {
+        app.post('/testimonials', async (req, res) => {
             const testimonial = req.body;
             const result = await testimonialCollection.insertOne(testimonial);
             res.send(result);
         })
-        app.get('/testimonials', async(req, res) => {
+        app.get('/testimonials', async (req, res) => {
             const result = await testimonialCollection.find().toArray();
-            res.send(result); 
-        }) 
-        
+            res.send(result);
+        })
+
         // 4. select class related apis
-        app.post('/selected', async(req, res) => {
+        app.post('/selected', async (req, res) => {
             const course = req.body;
             const result = await selectedCollection.insertOne(course);
             res.send(result);
         })
         // get selected course by email
-        app.get('/selected',verifyJWT, async(req, res) => {
+        app.get('/selected', verifyJWT, async (req, res) => {
             const email = req.query.email;
             const decodedEmail = req.decoded.email;
-            if(email !== decodedEmail){
+            if (email !== decodedEmail) {
                 return res.status(403).send({
                     error: true, message: "Forbidden Access"
                 })
             }
-            if(!email) {
+            if (!email) {
                 res.send([]);
             }
-            const query = {email: email};
+            const query = { email: email };
             const result = await selectedCollection.find(query).toArray();
             res.send(result);
         })
-        app.delete('/selected/:id', async(req, res) => {
+        app.delete('/selected/:id', async (req, res) => {
             const id = req.params.id;
-            const query = { _id: new ObjectId(id)};
+            const query = { _id: new ObjectId(id) };
             const result = await selectedCollection.deleteOne(query);
             res.send(result);
         })
-        app.get('/selected/:id', async(req, res) => {
+        app.get('/selected/:id', async (req, res) => {
             const id = req.params.id;
-            const query = { _id: new ObjectId(id)};
+            const query = { _id: new ObjectId(id) };
             const result = await selectedCollection.findOne(query);
             res.send(result);
         })
-        
-       // save booking-courses info to db
-       app.post ('/enrolled-courses', async (req, res) => {
-        const enroll = req.body;
-        const result = await enrolledCollection.insertOne(enroll);
-        res.send(result);
-       })
+
+        // 5. enrolled course related apis
+        // save booking-courses info to db
+        app.post('/enrolled-courses', async (req, res) => {
+            const enroll = req.body;
+            const result = await enrolledCollection.insertOne(enroll);
+            res.send(result);
+        })
+
+        app.get('/enrolled-courses', async (req, res) => {
+            const email = req.query.email;
+            if (!email) {
+                res.send([]);
+            }
+            const query = { email: email };
+            const result = await enrolledCollection.find(query).toArray();
+            res.send(result);    
+        })
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
