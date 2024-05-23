@@ -90,7 +90,7 @@ async function run() {
         app.post('/users', async (req, res) => {
             const user = req.body;
             const query = {email: user.email};
-            const alreadyExist = await usersCollection.findOne(query);
+            const alreadyExist = await usersCollection.findOne(query); 
             if(alreadyExist) {
                 return res.send({message: "The user already exist"})
             }
@@ -98,19 +98,48 @@ async function run() {
             const result = await usersCollection.insertOne(user);
             res.send(result); 
         })
+        app.get('/users',verifyJWT, async(req, res) => {
+            const result = await usersCollection.find().toArray();
+            res.send(result); 
+        })
+        // ToDo: admin security layer (/users/admin/:email)
 
-        // get user by email
+        // update role
+        app.patch('/users/admin/:id', async(req, res) =>{
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id)};
+            const updatedDoc = {
+                $set: {
+                    role: 'admin'
+                }
+            }
+            const result = await usersCollection.updateOne(query, updatedDoc);
+            res.send(result);
+        })
+        app.patch('/users/instructor/:id', async(req, res) =>{
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id)};
+            const updatedDoc = {
+                $set: {
+                    role: 'instructor' 
+                }
+            }
+            const result = await usersCollection.updateOne(query, updatedDoc);
+            res.send(result);
+        })
+
+        // get user role by email
         app.get('/users/:email', async(req, res) => {
             const email = req.params.email;
             const query = {email: email};
             const result = await usersCollection.findOne(query);
-            res.send(result); 
+            res.send(result);
         })
 
 
         // 1. course related apis
 
-        app.post('/courses', async (req, res) => {
+        app.post('/courses',verifyJWT, async (req, res) => {
             const course = req.body;
             const result = await courseCollect.insertOne(course);
             res.send(result);
@@ -124,14 +153,13 @@ async function run() {
         // update course number after enrolled
         // app.patch('/courses/:id', async (req, res) => {
         //     const id = req.params.id;
-        //     // const paymentInfo = req.body;
-        //     const students = req.body.students;
-        //     const seats = req.body.seats;
+        //     const courseData = req.body;
+        //     console.log(courseData);
         //     const query = { _id: new ObjectId(id)};
         //     const updatedDoc = {
         //         $set: {
-        //             enrolledStudents: students + 1,
-        //             availableSets: seats - 1
+        //             enrolledStudents: courseData.enrolledStudents + 1,
+        //             availableSets:courseData.availableSets - 1
         //         }
         //     }
         //     const update = await courseCollect.updateOne(query, updatedDoc);
