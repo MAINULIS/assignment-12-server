@@ -142,16 +142,45 @@ async function run() {
         app.post('/courses',verifyJWT, async (req, res) => {
             const course = req.body;
             const result = await courseCollect.insertOne(course);
-            res.send(result);
+            res.send(result); 
         })
 
         app.get('/courses', async (req, res) => {
-            const result = await courseCollect.find().toArray();
+            const query = {};
+            const options = {
+                sort: {
+                    "enrolledStudents": -1
+                }
+            }
+            const result = await courseCollect.find(query, options).toArray();
+            res.send(result); 
+        })
+        // update status
+        app.patch('/courses/approved/:id', async(req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id)};
+            const updatedDoc = {
+                $set: {
+                    status: 'approved'
+                }
+            }
+            const result = await courseCollect.updateOne(filter, updatedDoc);
+            res.send(result);
+        })
+        app.patch('/courses/deny/:id', async(req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id)};
+            const updatedDoc = {
+                $set: {
+                    status: 'deny'
+                }
+            }
+            const result = await courseCollect.updateOne(filter, updatedDoc);
             res.send(result);
         })
         // ToDo: update course student number after payment
         // update course number after enrolled
-        // app.patch('/courses/:id', async (req, res) => {
+        // app.patch('/courses/:id', async (req, res) => { 
         //     const id = req.params.id;
         //     const courseData = req.body;
         //     console.log(courseData);
@@ -174,7 +203,13 @@ async function run() {
             res.send(result);         
         })
         app.get('/instructors', async (req, res) => {
-            const result = await instructorCollection.find().toArray();
+            const query = {};
+            const options = {
+                sort: {
+                    "students": sort = -1
+                }
+            }
+            const result = await instructorCollection.find(query, options).toArray();
             res.send(result);
         }) 
 
