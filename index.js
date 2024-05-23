@@ -155,6 +155,22 @@ async function run() {
             const result = await courseCollect.find(query, options).toArray();
             res.send(result); 
         })
+
+        app.get('/courses/:email',verifyJWT, async(req, res) => {
+            const email = req.params.email;
+            const decodedEmail = req.decoded.email;
+            if (email !== decodedEmail) {
+                return res.status(403).send({
+                    error: true, message: "Forbidden Access"
+                })
+            }
+            if (!email) {
+                res.send([]);
+            }
+            const query = {email: email};
+            const result = await courseCollect.find(query).toArray()
+            res.send(result); 
+        })
         // update status
         app.patch('/courses/approved/:id', async(req, res) => {
             const id = req.params.id;
