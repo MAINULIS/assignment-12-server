@@ -64,6 +64,7 @@ async function run() {
         const selectedCollection = client.db('assignment-12').collection('selected');
         const enrolledCollection = client.db('assignment-12').collection('enrolled');
         const usersCollection = client.db('assignment-12').collection('users');
+        const feedbackCollection = client.db('assignment-12').collection('feedback');
 
         // generate client secret
         app.post('/create-payment-intent', verifyJWT, async (req, res) => {
@@ -226,7 +227,7 @@ async function run() {
                 }
             }
             const result = await instructorCollection.find(query, options).toArray();
-            res.send(result);
+            res.send(result); 
         }) 
 
         // 3. testimonial related apis
@@ -258,7 +259,7 @@ async function run() {
             if (!email) {
                 res.send([]);
             }
-            const query = { email: email };
+            const query = { email: email }; 
             const result = await selectedCollection.find(query).toArray();
             res.send(result);
         })
@@ -293,12 +294,34 @@ async function run() {
             res.send(result);    
         })
 
+        // 6. Feedback related apis
+        app.post('/feedback',verifyJWT, async(req, res) => {
+            const feedback = req.body;
+            const result = await feedbackCollection.insertOne(feedback);
+            res.send(result);
+        })
+
+        app.get('/feedback/:email',verifyJWT, async(req, res) => {
+            const email = req.params.email;
+            const decodedEmail = req.decoded.email;
+            if (email !== decodedEmail) {
+                return res.status(403).send({
+                    error: true, message: "Forbidden Access"
+                })
+            }
+            if (!email) {
+                res.send([]);
+            }
+            const query = {email: email};
+            const result = await feedbackCollection.find(query).toArray();
+            res.send(result); 
+        })
+
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
-        // Ensures that the client will close when you finish/error
-        // await client.close();
+
     }
 }
 run().catch(console.dir);
