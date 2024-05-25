@@ -143,10 +143,30 @@ async function run() {
         app.post('/courses',verifyJWT, async (req, res) => {
             const course = req.body;
             const result = await courseCollect.insertOne(course);
+            res.send(result);  
+        })
+        
+        app.get('/courses-id/:id', async(req, res) => {
+            const id = req.params.id;
+            const query = {_id: new ObjectId(id)}; 
+            const result = await courseCollect.findOne(query);
             res.send(result); 
+        })  
+
+        app.patch('/courses/:id', async(req, res) => {
+            const id = req.params.id;
+            const updatedCourse = req.body;
+            const filter = {_id: new ObjectId(id)};
+            const updatedDoc = {
+                $set: {
+                    ...updatedCourse
+                }
+            }
+            const result = await courseCollect.updateOne(filter, updatedDoc)
+            res.send(result);
         })
 
-        app.get('/courses', async (req, res) => {
+        app.get('/courses', async (req, res) => { 
             const query = {};
             const options = {
                 sort: {
